@@ -1,0 +1,226 @@
+{
+  "info": {
+    "name": "EGO API",
+    "description": "EGO Marketplace API - covers every endpoint implemented through Task 13 (health, auth, users, workers, businesses, jobs, applications). No real tokens are stored here - set the `firebase_token` collection variable locally with a real Firebase ID token before running protected requests; never commit a real value into this file. Full MVP flow, in order: Health -> Auth -> Users -> Workers -> Businesses -> Jobs -> Applications. For the apply -> review flow specifically: set firebase_token to a Worker's token and run 'POST .../applications', copy the returned match_id into the application_id variable, then switch firebase_token to the job-owning Business's token and run the review request. KNOWN LIMITATION (see docs/mvp-backend-audit.md section 12): every request below that requires auth currently returns 501, because the backend cannot yet map a Firebase UID to an EGO user (no firebase_uid column on `users`). This is a documented, pending schema decision - not a bug in this collection.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{firebase_token}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000", "type": "string" },
+    { "key": "firebase_token", "value": "", "type": "string" },
+    { "key": "job_id", "value": "", "type": "string" },
+    { "key": "category_id", "value": "", "type": "string" },
+    { "key": "application_id", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        { "name": "GET /health", "request": { "method": "GET", "url": "{{base_url}}/health", "auth": { "type": "noauth" } } },
+        { "name": "GET /health/db", "request": { "method": "GET", "url": "{{base_url}}/health/db", "auth": { "type": "noauth" } } }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "How to get a firebase_token (read me)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/health",
+            "auth": { "type": "noauth" },
+            "description": "This backend authenticates via Firebase ID tokens verified server-side (Firebase Admin SDK) - there is no username/password or Postman-native OAuth2 login endpoint to call here. To get a real token for manual testing: sign in a test user through the Firebase client SDK (e.g. the Flutter app, or Firebase's own REST 'signInWithPassword'/'signInWithCustomToken' endpoints against your Firebase project), copy the returned `idToken`, and paste it into this collection's `firebase_token` variable. Every other request in this collection uses that variable via the collection-level Bearer auth - you never need to add an Authorization header to individual requests. This request itself just hits the public health check as a harmless placeholder/reminder; it carries no auth."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        { "name": "GET /api/v1/users/me", "request": { "method": "GET", "url": "{{base_url}}/api/v1/users/me" } },
+        {
+          "name": "PATCH /api/v1/users/me",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/v1/users/me",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"language\": \"hi\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Workers",
+      "item": [
+        { "name": "GET /api/v1/workers/me", "request": { "method": "GET", "url": "{{base_url}}/api/v1/workers/me" } },
+        {
+          "name": "POST /api/v1/workers/me",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/workers/me",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Jane Doe\",\n  \"skills\": [\"plumbing\"],\n  \"service_locations\": [\"Mumbai\"]\n}" }
+          }
+        },
+        {
+          "name": "PATCH /api/v1/workers/me",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/v1/workers/me",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"availability\": \"full-time\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Businesses",
+      "item": [
+        { "name": "GET /api/v1/businesses/me", "request": { "method": "GET", "url": "{{base_url}}/api/v1/businesses/me" } },
+        {
+          "name": "POST /api/v1/businesses/me",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/businesses/me",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"account_type\": \"business\",\n  \"business_name\": \"Acme Co\"\n}" }
+          }
+        },
+        {
+          "name": "PATCH /api/v1/businesses/me",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/v1/businesses/me",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"business_name\": \"Acme Co Updated\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Jobs",
+      "item": [
+        {
+          "name": "GET /api/v1/jobs (public listing)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/jobs?limit=20&offset=0",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "jobs"],
+              "query": [
+                { "key": "limit", "value": "20" },
+                { "key": "offset", "value": "0" },
+                { "key": "status", "value": "open", "disabled": true },
+                { "key": "category_id", "value": "{{category_id}}", "disabled": true },
+                { "key": "location", "value": "Mumbai", "disabled": true }
+              ]
+            },
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "GET /api/v1/jobs/{job_id} (public detail)",
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/jobs/{{job_id}}", "auth": { "type": "noauth" } }
+        },
+        {
+          "name": "POST /api/v1/jobs (Business only)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/jobs",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category_id\": \"{{category_id}}\",\n  \"title\": \"Fix leaking pipe\",\n  \"description\": \"Kitchen sink is leaking, needs urgent repair.\",\n  \"budget\": \"1500.00\",\n  \"location\": \"Mumbai, Maharashtra\",\n  \"duration\": \"1 day\"\n}"
+            }
+          }
+        },
+        {
+          "name": "PATCH /api/v1/jobs/{job_id} - update fields (owner only)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/v1/jobs/{{job_id}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Fix leaking pipe (updated)\"\n}" }
+          }
+        },
+        {
+          "name": "PATCH /api/v1/jobs/{job_id} - publish (draft -> open)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/v1/jobs/{{job_id}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"open\"\n}" }
+          }
+        },
+        {
+          "name": "PATCH /api/v1/jobs/{job_id} - close (open -> closed)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/v1/jobs/{{job_id}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"closed\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Applications",
+      "item": [
+        {
+          "name": "POST /api/v1/jobs/{job_id}/applications (Worker applies)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/jobs/{{job_id}}/applications",
+            "description": "No request body - the applicant is derived from the authenticated Worker (firebase_token must belong to a user with a Worker profile)."
+          }
+        },
+        {
+          "name": "GET /api/v1/jobs/{job_id}/applications (Business views applicants)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/jobs/{{job_id}}/applications",
+            "description": "firebase_token must belong to the Business that owns this job."
+          }
+        },
+        {
+          "name": "GET /api/v1/applications/me (Worker - my applications)",
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/applications/me" }
+        },
+        {
+          "name": "GET /api/v1/applications/{application_id} (applicant or owning business)",
+          "request": { "method": "GET", "url": "{{base_url}}/api/v1/applications/{{application_id}}" }
+        },
+        {
+          "name": "PATCH /api/v1/applications/{application_id} - accept (Business only)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/v1/applications/{{application_id}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"accepted\"\n}" }
+          }
+        },
+        {
+          "name": "PATCH /api/v1/applications/{application_id} - reject (Business only)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/api/v1/applications/{{application_id}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"rejected\"\n}" }
+          }
+        },
+        {
+          "name": "DELETE /api/v1/applications/{application_id} (Worker withdraws)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/applications/{{application_id}}",
+            "description": "Not a physical delete - transitions status to 'withdrawn'."
+          }
+        }
+      ]
+    }
+  ]
+}
