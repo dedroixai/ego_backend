@@ -7,6 +7,13 @@ services:
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
+      # pydantic-core 2.27.1 has no prebuilt wheel for Render's default
+      # Python (3.14 as of writing), which forces a from-source Rust build
+      # via maturin - and that fails on Render's build sandbox because the
+      # Cargo registry dir is read-only. Pin to a version with prebuilt
+      # wheels instead of fixing the build environment.
+      - key: PYTHON_VERSION
+        value: 3.12.7
       - key: ENV
         value: production
       - key: DEBUG
