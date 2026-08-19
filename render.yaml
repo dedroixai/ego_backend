@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: ego-backend
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: ENV
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: LOG_LEVEL
+        value: INFO
+      - key: API_V1_PREFIX
+        value: /api/v1
+      # Comma-separated allowed browser origins - leave empty for an
+      # Android-only prototype (CORS only matters for browser clients).
+      - key: BACKEND_CORS_ORIGINS
+        value: ""
+      # Set in the Render dashboard, not here - use the Supabase transaction
+      # pooler (port 6543), not the session pooler (port 5432): Render's
+      # outbound network, like some ISPs, isn't guaranteed to allow 5432,
+      # and the transaction pooler is Supabase's documented recommendation
+      # for an app hosted outside its own network. Format:
+      #   postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres
+      - key: DATABASE_URL
+        sync: false
+      - key: DB_POOL_MODE
+        value: transaction
+      - key: DB_SSL_REQUIRE
+        value: "true"
+      - key: DB_ECHO
+        value: "false"
+      # Paste the full Firebase service-account JSON as a single-line
+      # string - set in the Render dashboard, never committed here.
+      - key: FIREBASE_CREDENTIALS_JSON
+        sync: false
