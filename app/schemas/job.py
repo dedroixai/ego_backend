@@ -22,9 +22,10 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import Field
+from pydantic import Field, computed_field
 
 from app.schemas.base import ORMModel, RequestModel
+from app.utils.default_job_image import default_job_image_url
 
 
 class JobCreate(RequestModel):
@@ -67,6 +68,13 @@ class JobResponse(ORMModel):
     image_url: str | None
     created_at: datetime
 
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def default_image_url(self) -> str:
+        """Generated placeholder to show when `image_url` is null - see
+        app/utils/default_job_image.py. Relative to the API base URL."""
+        return default_job_image_url(self.title, self.description)
+
 
 class JobListResponse(ORMModel):
     """Lighter shape for browse/search results - drops the free-text description."""
@@ -80,3 +88,9 @@ class JobListResponse(ORMModel):
     location: str
     image_url: str | None
     created_at: datetime
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def default_image_url(self) -> str:
+        """See `JobResponse.default_image_url`."""
+        return default_job_image_url(self.title)
